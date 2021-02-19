@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"github.com/cloudreve/Cloudreve/v3/service/slave"
 	"net/url"
 	"strconv"
 
@@ -165,6 +166,17 @@ func SlaveList(c *gin.Context) {
 	var service explorer.SlaveListService
 	if err := c.ShouldBindJSON(&service); err == nil {
 		res := service.List(c)
+		c.JSON(200, res)
+	} else {
+		c.JSON(200, ErrorResponse(err))
+	}
+}
+
+// SlaveAria2Init 初始化远程 Aria2 服务
+func SlaveAria2Init(c *gin.Context) {
+	var service slave.Aria2InitService
+	if err := c.ShouldBindJSON(service); err == nil {
+		res := service.Init()
 		c.JSON(200, res)
 	} else {
 		c.JSON(200, ErrorResponse(err))
