@@ -135,6 +135,8 @@ Neue',Helvetica,Arial,sans-serif; box-sizing: border-box; font-size: 14px; verti
 		{Name: "aria2_temp_path", Value: ``, Type: "aria2"},
 		{Name: "aria2_options", Value: `{}`, Type: "aria2"},
 		{Name: "aria2_interval", Value: `60`, Type: "aria2"},
+		{Name: "aria2_slave", Value: `0`, Type: "aria2"},
+		{Name: "aria2_slave_policyid", Value: `0`, Type: "aria2"},
 		{Name: "max_worker_num", Value: `10`, Type: "task"},
 		{Name: "max_parallel_transfer", Value: `4`, Type: "task"},
 		{Name: "secret_key", Value: util.RandStringRunes(256), Type: "auth"},
