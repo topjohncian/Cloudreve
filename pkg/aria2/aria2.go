@@ -3,6 +3,7 @@ package aria2
 import (
 	"encoding/json"
 	"net/url"
+	"strconv"
 	"sync"
 
 	model "github.com/cloudreve/Cloudreve/v3/models"
@@ -146,6 +147,54 @@ func Init(isReload bool) {
 		}
 	}
 
+}
+
+// SlaveInit 初始化 [Slave]
+func SlaveInit(options map[string]string) {
+	Lock.Lock()
+	defer Lock.Unlock()
+
+	// 关闭上个初始连接
+	if previousClient, ok := Instance.(*RPCService); ok {
+		if previousClient.Caller != nil {
+			util.Log().Debug("关闭上个 aria2 连接")
+			previousClient.Caller.Close()
+		}
+	}
+
+	timeout, err := strconv.Atoi(options["aria2_call_timeout"])
+	if err != nil {
+		timeout = 5
+	}
+
+	util.Log().Info("初始化 aria2 RPC 服务[%s]", options["aria2_rpcurl"])
+	client := &RPCService{}
+
+	// 解析RPC服务地址
+	server, err := url.Parse(options["aria2_rpcurl"])
+	if err != nil {
+		util.Log().Warning("无法解析 aria2 RPC 服务地址，%s", err)
+		Instance = &DummyAria2{}
+		return
+	}
+	server.Path = "/jsonrpc"
+
+	// 加载自定义下载配置
+	var globalOptions map[string]interface{}
+	err = json.Unmarshal([]byte(options["aria2_options"]), &globalOptions)
+	if err != nil {
+		util.Log().Warning("无法解析 aria2 全局配置，%s", err)
+		Instance = &DummyAria2{}
+		return
+	}
+
+	if err := client.Init(server.String(), options["aria2_token"], timeout, globalOptions); err != nil {
+		util.Log().Warning("初始化 aria2 RPC 服务失败，%s", err)
+		Instance = &DummyAria2{}
+		return
+	}
+
+	Instance = client
 }
 
 // getStatus 将给定的状态字符串转换为状态标识数字
