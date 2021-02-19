@@ -6,10 +6,10 @@ import (
 )
 
 type Aria2InitService struct {
-	options map[string]string
+	Options map[string]string `json:"options"`
 }
 
 func (service Aria2InitService) Init() serializer.Response {
-	aria2.SlaveInit(service.options)
+	aria2.SlaveInit(service.Options)
 	return serializer.Response{}
 }

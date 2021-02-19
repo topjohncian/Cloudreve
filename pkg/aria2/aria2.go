@@ -93,60 +93,84 @@ func Init(isReload bool) {
 	Lock.Lock()
 	defer Lock.Unlock()
 
-	// 关闭上个初始连接
-	if previousClient, ok := Instance.(*RPCService); ok {
-		if previousClient.Caller != nil {
-			util.Log().Debug("关闭上个 aria2 连接")
-			previousClient.Caller.Close()
+	if !model.IsTrueVal(model.GetSettingByName("aria2_slave")) {
+		// 关闭上个初始连接
+		if previousClient, ok := Instance.(*RPCService); ok {
+			if previousClient.Caller != nil {
+				util.Log().Debug("关闭上个 aria2 连接")
+				previousClient.Caller.Close()
+			}
+		}
+
+		options := model.GetSettingByNames("aria2_rpcurl", "aria2_token", "aria2_options")
+		timeout := model.GetIntSetting("aria2_call_timeout", 5)
+		if options["aria2_rpcurl"] == "" {
+			Instance = &DummyAria2{}
+			return
+		}
+
+		util.Log().Info("初始化 aria2 RPC 服务[%s]", options["aria2_rpcurl"])
+		client := &RPCService{}
+
+		// 解析RPC服务地址
+		server, err := url.Parse(options["aria2_rpcurl"])
+		if err != nil {
+			util.Log().Warning("无法解析 aria2 RPC 服务地址，%s", err)
+			Instance = &DummyAria2{}
+			return
+		}
+		server.Path = "/jsonrpc"
+
+		// 加载自定义下载配置
+		var globalOptions map[string]interface{}
+		err = json.Unmarshal([]byte(options["aria2_options"]), &globalOptions)
+		if err != nil {
+			util.Log().Warning("无法解析 aria2 全局配置，%s", err)
+			Instance = &DummyAria2{}
+			return
+		}
+
+		if err := client.Init(server.String(), options["aria2_token"], timeout, globalOptions); err != nil {
+			util.Log().Warning("初始化 aria2 RPC 服务失败，%s", err)
+			Instance = &DummyAria2{}
+			return
+		}
+
+		Instance = client
+
+		if !isReload {
+			// 从数据库中读取未完成任务，创建监控
+			unfinished := model.GetDownloadsByStatus(Ready, Paused, Downloading)
+
+			for i := 0; i < len(unfinished); i++ {
+				// 创建任务监控
+				NewMonitor(&unfinished[i])
+			}
+		}
+	} else {
+		options := model.GetSettingByNames("aria2_rpcurl", "aria2_token", "aria2_options", "aria2_call_timeout")
+		remote, err := model.GetPolicyByID(uint(model.GetIntSetting("aria2_slave_policyid", 0)))
+		if err != nil {
+			util.Log().Warning("初始化 从机 aria2 RPC 服务失败，%s", err)
+			Instance = &DummyAria2{}
+			return
+		}
+
+		util.Log().Info("初始化 从机 aria2 RPC 服务[%s]", remote.Server)
+		client := &RemoteService{}
+
+		if err := client.Init(remote, options); err != nil {
+			util.Log().Warning("初始化 从机 aria2 RPC 服务失败，%s", err)
+			Instance = &DummyAria2{}
+			return
+		}
+
+		Instance = client
+
+		if !isReload {
+			//TODO
 		}
 	}
-
-	options := model.GetSettingByNames("aria2_rpcurl", "aria2_token", "aria2_options")
-	timeout := model.GetIntSetting("aria2_call_timeout", 5)
-	if options["aria2_rpcurl"] == "" {
-		Instance = &DummyAria2{}
-		return
-	}
-
-	util.Log().Info("初始化 aria2 RPC 服务[%s]", options["aria2_rpcurl"])
-	client := &RPCService{}
-
-	// 解析RPC服务地址
-	server, err := url.Parse(options["aria2_rpcurl"])
-	if err != nil {
-		util.Log().Warning("无法解析 aria2 RPC 服务地址，%s", err)
-		Instance = &DummyAria2{}
-		return
-	}
-	server.Path = "/jsonrpc"
-
-	// 加载自定义下载配置
-	var globalOptions map[string]interface{}
-	err = json.Unmarshal([]byte(options["aria2_options"]), &globalOptions)
-	if err != nil {
-		util.Log().Warning("无法解析 aria2 全局配置，%s", err)
-		Instance = &DummyAria2{}
-		return
-	}
-
-	if err := client.Init(server.String(), options["aria2_token"], timeout, globalOptions); err != nil {
-		util.Log().Warning("初始化 aria2 RPC 服务失败，%s", err)
-		Instance = &DummyAria2{}
-		return
-	}
-
-	Instance = client
-
-	if !isReload {
-		// 从数据库中读取未完成任务，创建监控
-		unfinished := model.GetDownloadsByStatus(Ready, Paused, Downloading)
-
-		for i := 0; i < len(unfinished); i++ {
-			// 创建任务监控
-			NewMonitor(&unfinished[i])
-		}
-	}
-
 }
 
 // SlaveInit 初始化 [Slave]

@@ -10,3 +10,8 @@ type ListRequest struct {
 	Path      string `json:"path"`
 	Recursive bool   `json:"recursive"`
 }
+
+// Aria2InitRequest 初始化远程 Aria2 服务请求
+type Aria2InitRequest struct {
+	Options map[string]string `json:"options"`
+}

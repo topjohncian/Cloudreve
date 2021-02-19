@@ -175,7 +175,7 @@ func SlaveList(c *gin.Context) {
 // SlaveAria2Init 初始化远程 Aria2 服务
 func SlaveAria2Init(c *gin.Context) {
 	var service slave.Aria2InitService
-	if err := c.ShouldBindJSON(service); err == nil {
+	if err := c.ShouldBind(service); err == nil {
 		res := service.Init()
 		c.JSON(200, res)
 	} else {
