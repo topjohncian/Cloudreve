@@ -61,6 +61,13 @@ type PolicyOption struct {
 	ChunkSize uint64 `json:"chunk_size,omitempty"`
 	// 分片上传时是否需要预留空间
 	PlaceholderWithSize bool `json:"placeholder_with_size,omitempty"`
+	// 每秒对存储端的 API 请求上限
+	TPSLimit float64 `json:"tps_limit,omitempty"`
+	// 每秒 API 请求爆发上限
+	TPSLimitBurst int `json:"tps_limit_burst,omitempty"`
+	// Set this to `true` to force the request to use path-style addressing,
+	// i.e., `http://s3.amazonaws.com/BUCKET/KEY `
+	S3ForcePathStyle bool `json:"s3_path_style"`
 }
 
 // thumbSuffix 支持缩略图处理的文件扩展名
@@ -118,7 +125,7 @@ func (policy *Policy) BeforeSave() (err error) {
 	return err
 }
 
-//SerializeOptions 将序列后的Option写入到数据库字段
+// SerializeOptions 将序列后的Option写入到数据库字段
 func (policy *Policy) SerializeOptions() (err error) {
 	optionsValue, err := json.Marshal(&policy.OptionsSerialized)
 	policy.Options = string(optionsValue)

@@ -12,6 +12,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v3/pkg/email"
 	"github.com/cloudreve/Cloudreve/v3/pkg/mq"
 	"github.com/cloudreve/Cloudreve/v3/pkg/task"
+	"github.com/cloudreve/Cloudreve/v3/pkg/wopi"
 	"github.com/gin-gonic/gin"
 	"io/fs"
 )
@@ -95,19 +96,16 @@ func Init(path string, statics fs.FS) {
 				auth.Init()
 			},
 		},
+		{
+			"master",
+			func() {
+				wopi.Init()
+			},
+		},
 	}
 
 	for _, dependency := range dependencies {
-		switch dependency.mode {
-		case "master":
-			if conf.SystemConfig.Mode == "master" {
-				dependency.factory()
-			}
-		case "slave":
-			if conf.SystemConfig.Mode == "slave" {
-				dependency.factory()
-			}
-		default:
+		if dependency.mode == conf.SystemConfig.Mode || dependency.mode == "both" {
 			dependency.factory()
 		}
 	}

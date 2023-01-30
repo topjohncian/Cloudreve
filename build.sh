@@ -24,19 +24,24 @@ buildAssets() {
   rm -rf assets/build
 
   export CI=false
+  export GENERATE_SOURCEMAP=false
 
   cd $REPO/assets
 
+  yarn install --network-timeout 1000000
   yarn install
   yarn run build
   cd build
-  find . -name "*.map" -type f -delete
   cd $REPO
+
+  # please keep in mind that if this final output binary `assets.zip` name changed, please go and update the `Dockerfile` as well
   zip -r - assets/build >assets.zip
 }
 
 buildBinary() {
   cd $REPO
+
+  # same as assets, if this final output binary `cloudreve` name changed, please go and update the `Dockerfile`
   go build -a -o cloudreve -ldflags " -X 'github.com/cloudreve/Cloudreve/v3/pkg/conf.BackendVersion=$VERSION' -X 'github.com/cloudreve/Cloudreve/v3/pkg/conf.LastCommit=$COMMIT_SHA'"
 }
 
